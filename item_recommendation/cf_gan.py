@@ -5,15 +5,15 @@ import cPickle
 import numpy as np
 import utils as ut
 import multiprocessing
-
+from tqdm import tqdm
 cores = multiprocessing.cpu_count()
 
 #########################################################################################
 # Hyper-parameters
 #########################################################################################
 EMB_DIM = 5
-USER_NUM = 943
-ITEM_NUM = 1683
+USER_NUM = 57960
+ITEM_NUM = 91082
 BATCH_SIZE = 16
 INIT_DELTA = 0.05
 
@@ -25,7 +25,7 @@ DIS_TRAIN_FILE = workdir + 'dis-train.txt'
 # Load data
 #########################################################################################
 user_pos_train = {}
-with open(workdir + 'train_fileNews.txt')as fin:
+with open(workdir + 'train.txt')as fin:
     for line in fin:
         line = line.split()
         uid = int(line[0])
@@ -38,7 +38,7 @@ with open(workdir + 'train_fileNews.txt')as fin:
                 user_pos_train[uid] = [iid]
 
 user_pos_test = {}
-with open(workdir + 'test_fileNews.txt')as fin:
+with open(workdir + 'test.txt')as fin:
     for line in fin:
         line = line.split()
         uid = int(line[0])
@@ -103,7 +103,10 @@ def simple_test(sess, model):
     test_users = user_pos_test.keys()
     test_user_num = len(test_users)
     index = 0
+    i=0
     while True:
+        i+=1
+        print i
         if index >= test_user_num:
             break
         user_batch = test_users[index:index + batch_size]
@@ -111,8 +114,9 @@ def simple_test(sess, model):
 
         user_batch_rating = sess.run(model.all_rating, {model.u: user_batch})
         user_batch_rating_uid = zip(user_batch_rating, user_batch)
+        #print 'user_batch_rating_uid:',user_batch_rating_uid
         batch_result = pool.map(simple_test_one_user, user_batch_rating_uid)
-        for re in batch_result:
+        for re in tqdm(batch_result):
             result += re
 
     pool.close()
@@ -142,7 +146,11 @@ def generate_for_d(sess, model, filename):
 def main():
     print "load model..."
     #param = cPickle.load(open(workdir + "model_dns_ori.pkl"))
-    generator = GEN(ITEM_NUM, USER_NUM, EMB_DIM, lamda=0.0 / BATCH_SIZE, param=None, initdelta=INIT_DELTA,
+    p1=np.float32(np.random.uniform(-1,1,(57960,5) ))
+    p2=np.float32(np.random.uniform(-1,1,(91082,5) ))
+    p3=np.float32(np.random.uniform(-1,1,91082))
+    param=[p1,p2,p3]
+    generator = GEN(ITEM_NUM, USER_NUM, EMB_DIM, lamda=0.0 / BATCH_SIZE, param=param, initdelta=INIT_DELTA,
                     learning_rate=0.001)
     discriminator = DIS(ITEM_NUM, USER_NUM, EMB_DIM, lamda=0.1 / BATCH_SIZE, param=None, initdelta=INIT_DELTA,
                         learning_rate=0.001)
@@ -161,63 +169,64 @@ def main():
     # minimax training
     best = 0.
     for epoch in range(15):
-        if epoch >= 0:
-            for d_epoch in range(100):
-                if d_epoch % 5 == 0:
-                    generate_for_d(sess, generator, DIS_TRAIN_FILE)
-                    train_size = ut.file_len(DIS_TRAIN_FILE)
-                index = 1
-                while True:
-                    if index > train_size:
-                        break
-                    if index + BATCH_SIZE <= train_size + 1:
-                        input_user, input_item, input_label = ut.get_batch_data(DIS_TRAIN_FILE, index, BATCH_SIZE)
-                    else:
-                        input_user, input_item, input_label = ut.get_batch_data(DIS_TRAIN_FILE, index,
-                                                                                train_size - index + 1)
-                    index += BATCH_SIZE
+        for d_epoch in range(100):
+            print 'discriminator',i
+            if d_epoch % 5 == 0:
+                generate_for_d(sess, generator, DIS_TRAIN_FILE)
+                train_size = ut.file_len(DIS_TRAIN_FILE)
+            index = 1
+            while True:
+                if index > train_size:
+                    break
+                if index + BATCH_SIZE <= train_size + 1:
+                    input_user, input_item, input_label = ut.get_batch_data(DIS_TRAIN_FILE, index, BATCH_SIZE)
+                else:
+                    input_user, input_item, input_label = ut.get_batch_data(DIS_TRAIN_FILE, index,
+                                                                            train_size - index + 1)
+                index += BATCH_SIZE
 
-                    _ = sess.run(discriminator.d_updates,
-                                 feed_dict={discriminator.u: input_user, discriminator.i: input_item,
-                                            discriminator.label: input_label})
+                _ = sess.run(discriminator.d_updates,
+                             feed_dict={discriminator.u: input_user, discriminator.i: input_item,
+                                        discriminator.label: input_label})
 
-            # Train G
-            for g_epoch in range(50):  # 50
-                for u in user_pos_train:
-                    sample_lambda = 0.2
-                    pos = user_pos_train[u]
+        # Train G
+        for g_epoch in range(50):  # 50
+            print 'generator',i
+            for u in user_pos_train:
+                sample_lambda = 0.2
+                pos = user_pos_train[u]
 
-                    rating = sess.run(generator.all_logits, {generator.u: u})
-                    exp_rating = np.exp(rating)
-                    prob = exp_rating / np.sum(exp_rating)  # prob is generator distribution p_\theta
+                rating = sess.run(generator.all_logits, {generator.u: u})
+                exp_rating = np.exp(rating)
+                prob = exp_rating / np.sum(exp_rating)  # prob is generator distribution p_\theta
 
-                    pn = (1 - sample_lambda) * prob
-                    pn[pos] += sample_lambda * 1.0 / len(pos)
-                    # Now, pn is the Pn in importance sampling, prob is generator distribution p_\theta
+                pn = (1 - sample_lambda) * prob
+                pn[pos] += sample_lambda * 1.0 / len(pos)
+                # Now, pn is the Pn in importance sampling, prob is generator distribution p_\theta
 
-                    sample = np.random.choice(np.arange(ITEM_NUM), 2 * len(pos), p=pn)
-                    ###########################################################################
-                    # Get reward and adapt it with importance sampling
-                    ###########################################################################
-                    reward = sess.run(discriminator.reward, {discriminator.u: u, discriminator.i: sample})
-                    reward = reward * prob[sample] / pn[sample]
-                    ###########################################################################
-                    # Update G
-                    ###########################################################################
-                    _ = sess.run(generator.gan_updates,
-                                 {generator.u: u, generator.i: sample, generator.reward: reward})
+                sample = np.random.choice(np.arange(ITEM_NUM), 2 * len(pos), p=pn)
+                ###########################################################################
+                # Get reward and adapt it with importance sampling
+                ###########################################################################
+                reward = sess.run(discriminator.reward, {discriminator.u: u, discriminator.i: sample})
+                reward = reward * prob[sample] / pn[sample]
+                ###########################################################################
+                # Update G
+                ###########################################################################
+                _ = sess.run(generator.gan_updates,
+                             {generator.u: u, generator.i: sample, generator.reward: reward})
 
-                result = simple_test(sess, generator)
-                print "epoch ", epoch, "gen: ", result
-                buf = '\t'.join([str(x) for x in result])
-                gen_log.write(str(epoch) + '\t' + buf + '\n')
-                gen_log.flush()
+            result = simple_test(sess, generator)
+            print "epoch ", epoch, "gen: ", result
+            buf = '\t'.join([str(x) for x in result])
+            gen_log.write(str(epoch) + '\t' + buf + '\n')
+            gen_log.flush()
 
-                p_5 = result[1]
-                if p_5 > best:
-                    print 'best: ', result
-                    best = p_5
-                    generator.save_model(sess, "ml-100k/gan_generator.pkl")
+            p_5 = result[1]
+            if p_5 > best:
+                print 'best: ', result
+                best = p_5
+                generator.save_model(sess, "ml-100k/gan_generator.pkl")
 
     gen_log.close()
     dis_log.close()
