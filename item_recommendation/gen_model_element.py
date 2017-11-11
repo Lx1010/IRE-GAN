@@ -37,9 +37,7 @@ class GEN():
         self.i_embedding = tf.nn.embedding_lookup(self.item_embeddings, self.i)
         self.i_bias = tf.gather(self.item_bias, self.i)
 
-        self.all_logits = tf.tensordot(self.u_embedding, self.item_embeddings,1) #+ self.item_bias 
-        #print 'Shape of tensor',self.all_logits 
-        #self.all_logits =tf.contrib.layers.fully_connected+
+        self.all_logits = tf.reduce_sum(tf.multiply(self.u_embedding, self.item_embeddings), 1) + self.item_bias
         self.i_prob = tf.gather(
             tf.reshape(tf.nn.softmax(tf.reshape(self.all_logits, [1, -1])), [-1]),
             self.i)
