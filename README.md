@@ -39,9 +39,11 @@ The data dump consists of user_id and set of article_id which represent the docu
 
 Each sample is a tuple of the form
 
-<user_id>  <article_id> <label>
+user-id, article-id, labelRead
 
-Only those users were taken who read >=10 articles, The ratio for read article to unread articles was 10:3
+Only those users were taken who read >=10 articles, 
+
+The ratio for read article to unread articles was 10:3
 
 ### Technique used: 
 
