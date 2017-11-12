@@ -1,37 +1,47 @@
-## Welcome to GitHub Pages
+# NEWS Recommendation Using Generative adversarial neural network.
 
-You can use the [editor on GitHub](https://github.com/hemang-akbari/IRE-GAN/edit/master/README.md) to maintain and preview the content for your website in Markdown files.
+## Problem Statement
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+NEWS Recommendation using GAN networks
+GAN has two networks (i) generative (ii) discriminative neural networks.
 
-### Markdown
+## Abstract
+In GAN, One neural net takes noise as input and generates samples and so is called the generator. The other model, called the discriminator receives samples from both the generator and the training data, and has to be able to distinguish between the two sources. These two networks play a continuous game, where the generator is learning to produce more and more realistic samples, and the discriminator is learning to get better and better at distinguishing generated data from real data. These two networks are trained simultaneously.
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+As we are using IRGAN for NEWS Recommendation, the generative
+retrieval focusing on predicting relevant documents given a query. while
+the discriminative retrieval focusing on predicting relevancy given a
+query-document pair. 
 
-```markdown
-Syntax highlighted code block
+On one hand, the discriminative model, aiming to
+mine signals from labelled data, provides guidance to train the generative
+model towards fitting the underlying relevance distribution over
+documents given the query. On the other hand, the generative model,
+acting as an attacker to the current discriminative model, generates
+diffcult examples for the discriminative model in an adversarial way by
+minimising its discrimination objective.
 
-# Header 1
-## Header 2
-### Header 3
+With the competition between these two models:(I) generative model
+learns to fitthe relevance distribution over documents via the signals from
+the discriminative model, and (ii) discriminative model is able to exploit
+the unlabelled data selected by the generative model to achieve a better
+estimation for document ranking.
 
-- Bulleted
-- List
+## Performance
+8.877% for additional layer on element wise product of
+scoring function. And 8.827% for dot product.
 
-1. Numbered
-2. List
+## INTRODUCTION
+We have a set of queries {q1,...,qN} and a set of documents{d1,...,dM},
+where queries here is number of readers and documents are set of articles
+read by those readers.
+### Overall Objective
+Thus, inspired by the idea of GAN, we aim to unify these two different
+types of IR models by letting them play a minimax game: the generative
+retrieval model would try to generate (or select) relevant documents that
+look like the ground-truth relevant documents and therefore could fool
+the discriminative retrieval model, whereas the discriminative retrieval
+model would try to draw a clear distinction between the ground-truth
+relevant documents and the generated ones made by its opponent
+generative retrieval model. Formally, we have:
 
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
-```
-
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
-
-### Jekyll Themes
-
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/hemang-akbari/IRE-GAN/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
-
-### Support or Contact
-
-Having trouble with Pages? Check out our [documentation](https://help.github.com/categories/github-pages-basics/) or [contact support](https://github.com/contact) and we’ll help you sort it out.
