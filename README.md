@@ -61,8 +61,15 @@ Neural layer added above elementwise multiplicated vector to get a score.
 Activation used: softmax
 
 ## results
+
 ![833](https://user-images.githubusercontent.com/8746899/32701756-205adbec-c801-11e7-992e-5c7c968b2d63.png)
+
 
 ### performance
 element wise product - 8.877%
 dot product - 8.827%.
+
+
+## To run the code
+run "python cf_gan_element.py" for element wise product scoring function
+run "python cf_gan_dot.py" for dot product scoring function
