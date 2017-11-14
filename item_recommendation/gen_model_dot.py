@@ -40,11 +40,11 @@ class GEN():
         self.all_logits = tf.tensordot(self.u_embedding, self.item_embeddings,1) #+ self.item_bias 
         #print 'Shape of tensor',self.all_logits 
         #self.all_logits =tf.contrib.layers.fully_connected+
-        self.i_prob = tf.gather(
-            tf.reshape(tf.nn.softmax(tf.reshape(self.all_logits, [1, -1])), [-1]),
-            self.i)
+#         self.i_prob = tf.gather(
+#             tf.reshape(tf.nn.softmax(tf.reshape(self.all_logits, [1, -1])), [-1]),
+#             self.i)
 
-        self.gan_loss = -tf.reduce_mean(tf.log(self.i_prob) * self.reward) + self.lamda * (
+        self.gan_loss = -tf.reduce_mean(tf.log(self.all_logits) * self.reward) + self.lamda * (
             tf.nn.l2_loss(self.u_embedding) + tf.nn.l2_loss(self.i_embedding) + tf.nn.l2_loss(self.i_bias))
 
         g_opt = tf.train.GradientDescentOptimizer(self.learning_rate)
